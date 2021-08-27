@@ -20,6 +20,7 @@ package org.apache.dolphinscheduler.api.controller;
 import static org.apache.dolphinscheduler.api.enums.Status.CREATE_ALERT_GROUP_ERROR;
 import static org.apache.dolphinscheduler.api.enums.Status.DELETE_ALERT_GROUP_ERROR;
 import static org.apache.dolphinscheduler.api.enums.Status.LIST_PAGING_ALERT_GROUP_ERROR;
+import static org.apache.dolphinscheduler.api.enums.Status.QUERY_ALERT_GROUP_ERROR;
 import static org.apache.dolphinscheduler.api.enums.Status.QUERY_ALL_ALERTGROUP_ERROR;
 import static org.apache.dolphinscheduler.api.enums.Status.UPDATE_ALERT_GROUP_ERROR;
 
@@ -78,7 +79,7 @@ public class AlertGroupController extends BaseController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "groupName", value = "GROUP_NAME", required = true, dataType = "String"),
             @ApiImplicitParam(name = "description", value = "DESC", dataType = "String"),
-            @ApiImplicitParam(name = "alertInstanceIds", value = "alertInstanceIds", dataType = "String")
+            @ApiImplicitParam(name = "alertInstanceIds", value = "alertInstanceIds", required = true, dataType = "String")
     })
     @PostMapping(value = "/create")
     @ResponseStatus(HttpStatus.CREATED)
@@ -98,7 +99,7 @@ public class AlertGroupController extends BaseController {
      * @param loginUser login user
      * @return alert group list
      */
-    @ApiOperation(value = "list", notes = "QUERY_ALERT_GROUP_LIST_NOTES")
+    @ApiOperation(value = "listAlertgroupById", notes = "QUERY_ALERT_GROUP_LIST_NOTES")
     @GetMapping(value = "/list")
     @ResponseStatus(HttpStatus.OK)
     @ApiException(QUERY_ALL_ALERTGROUP_ERROR)
@@ -121,8 +122,8 @@ public class AlertGroupController extends BaseController {
     @ApiOperation(value = "queryAlertGroupListPaging", notes = "QUERY_ALERT_GROUP_LIST_PAGING_NOTES")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "searchVal", value = "SEARCH_VAL", type = "String"),
-            @ApiImplicitParam(name = "pageNo", value = "PAGE_NO", dataType = "Int", example = "1"),
-            @ApiImplicitParam(name = "pageSize", value = "PAGE_SIZE", dataType = "Int", example = "20")
+            @ApiImplicitParam(name = "pageNo", value = "PAGE_NO", required = true, dataType = "Int", example = "1"),
+            @ApiImplicitParam(name = "pageSize", value = "PAGE_SIZE", required = true, dataType = "Int", example = "20")
     })
     @GetMapping(value = "/list-paging")
     @ResponseStatus(HttpStatus.OK)
@@ -132,15 +133,35 @@ public class AlertGroupController extends BaseController {
                              @RequestParam(value = "searchVal", required = false) String searchVal,
                              @RequestParam("pageNo") Integer pageNo,
                              @RequestParam("pageSize") Integer pageSize) {
-        Map<String, Object> result = checkPageParams(pageNo, pageSize);
-        if (result.get(Constants.STATUS) != Status.SUCCESS) {
-            return returnDataListPaging(result);
+        Result result = checkPageParams(pageNo, pageSize);
+        if (!result.checkResult()) {
+            return result;
         }
-
         searchVal = ParameterUtils.handleEscapes(searchVal);
-        result = alertGroupService.listPaging(loginUser, searchVal, pageNo, pageSize);
-        return returnDataListPaging(result);
+        return alertGroupService.listPaging(loginUser, searchVal, pageNo, pageSize);
     }
+    /**
+     * check alarm group detail by Id
+     *
+     * @param loginUser login user
+     * @param id alert group id
+     * @return one alert group
+     */
+
+    @ApiOperation(value = "queryAlertGroupById", notes = "QUERY_ALERT_GROUP_BY_ID_NOTES")
+    @ApiImplicitParams({@ApiImplicitParam(name = "id", value = "ALERT_GROUP_ID", dataType = "Int", example = "1")
+    })
+    @PostMapping(value = "/query")
+    @ResponseStatus(HttpStatus.OK)
+    @ApiException(QUERY_ALERT_GROUP_ERROR)
+    @AccessLogAnnotation(ignoreRequestArgs = "loginUser")
+    public Result queryAlertGroupById(@ApiIgnore @RequestAttribute(value = Constants.SESSION_USER) User loginUser,
+                                      @RequestParam("id") Integer id) {
+
+        Map<String, Object> result = alertGroupService.queryAlertGroupById(loginUser, id);
+        return returnDataList(result);
+    }
+
 
     /**
      * updateProcessInstance alert group
@@ -156,7 +177,7 @@ public class AlertGroupController extends BaseController {
             @ApiImplicitParam(name = "id", value = "ALERT_GROUP_ID", required = true, dataType = "Int", example = "100"),
             @ApiImplicitParam(name = "groupName", value = "GROUP_NAME", required = true, dataType = "String"),
             @ApiImplicitParam(name = "description", value = "DESC", dataType = "String"),
-            @ApiImplicitParam(name = "alertInstanceIds", value = "alertInstanceIds", dataType = "String")
+            @ApiImplicitParam(name = "alertInstanceIds", value = "alertInstanceIds", required = true, dataType = "String")
     })
     @PostMapping(value = "/update")
     @ResponseStatus(HttpStatus.OK)

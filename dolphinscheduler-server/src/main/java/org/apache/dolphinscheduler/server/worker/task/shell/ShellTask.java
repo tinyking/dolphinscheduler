@@ -17,15 +17,10 @@
 
 package org.apache.dolphinscheduler.server.worker.task.shell;
 
-import static java.util.Calendar.DAY_OF_MONTH;
-
 import org.apache.dolphinscheduler.common.Constants;
-import org.apache.dolphinscheduler.common.enums.CommandType;
-import org.apache.dolphinscheduler.common.enums.Direct;
 import org.apache.dolphinscheduler.common.process.Property;
 import org.apache.dolphinscheduler.common.task.AbstractParameters;
 import org.apache.dolphinscheduler.common.task.shell.ShellParameters;
-import org.apache.dolphinscheduler.common.utils.DateUtils;
 import org.apache.dolphinscheduler.common.utils.JSONUtils;
 import org.apache.dolphinscheduler.common.utils.OSUtils;
 import org.apache.dolphinscheduler.common.utils.ParameterUtils;
@@ -35,7 +30,7 @@ import org.apache.dolphinscheduler.server.worker.task.AbstractTask;
 import org.apache.dolphinscheduler.server.worker.task.CommandExecuteResult;
 import org.apache.dolphinscheduler.server.worker.task.ShellCommandExecutor;
 
-import org.slf4j.Logger;
+import org.apache.commons.collections.MapUtils;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -44,12 +39,11 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.slf4j.Logger;
 
 /**
  * shell task
@@ -101,7 +95,8 @@ public class ShellTask extends AbstractTask {
     public void handle() throws Exception {
         try {
             // construct process
-            CommandExecuteResult commandExecuteResult = shellCommandExecutor.run(buildCommand());
+            String command = buildCommand();
+            CommandExecuteResult commandExecuteResult = shellCommandExecutor.run(command);
             setExitStatusCode(commandExecuteResult.getExitStatusCode());
             setAppIds(commandExecuteResult.getAppIds());
             setProcessId(commandExecuteResult.getProcessId());
@@ -165,26 +160,12 @@ public class ShellTask extends AbstractTask {
 
     private String parseScript(String script) {
         // combining local and global parameters
-        Map<String, Property> paramsMap = ParamUtils.convert(ParamUtils.getUserDefParamsMap(taskExecutionContext.getDefinedParams()),
-            taskExecutionContext.getDefinedParams(),
-            shellParameters.getLocalParametersMap(),
-            shellParameters.getVarPoolMap(),
-            CommandType.of(taskExecutionContext.getCmdTypeIfComplement()),
-            taskExecutionContext.getScheduleTime());
-        // replace variable TIME with $[YYYYmmddd...] in shell file when history run job and batch complement job
-        if (taskExecutionContext.getScheduleTime() != null) {
-            if (paramsMap == null) {
-                paramsMap = new HashMap<>();
-            }
-            Date date = taskExecutionContext.getScheduleTime();
-            if (CommandType.COMPLEMENT_DATA.getCode() == taskExecutionContext.getCmdTypeIfComplement()) {
-                date = DateUtils.add(taskExecutionContext.getScheduleTime(), DAY_OF_MONTH, 1);
-            }
-            String dateTime = DateUtils.format(date, Constants.PARAMETER_FORMAT_TIME);
-            Property p = new Property();
-            p.setValue(dateTime);
-            p.setProp(Constants.PARAMETER_DATETIME);
-            paramsMap.put(Constants.PARAMETER_DATETIME, p);
+        Map<String, Property> paramsMap = ParamUtils.convert(taskExecutionContext,getParameters());
+        if (MapUtils.isEmpty(paramsMap)) {
+            paramsMap = new HashMap<>();
+        }
+        if (MapUtils.isNotEmpty(taskExecutionContext.getParamsMap())) {
+            paramsMap.putAll(taskExecutionContext.getParamsMap());
         }
         return ParameterUtils.convertParameterPlaceholders(script, ParamUtils.convert(paramsMap));
     }

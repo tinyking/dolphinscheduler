@@ -14,25 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dolphinscheduler.api.utils.exportprocess;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+package org.apache.dolphinscheduler.server.utils;
 
-/**
- * task node param factory
- */
-public class TaskNodeParamFactory {
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 
-    private static Map<String, ProcessAddTaskParam> taskServices = new ConcurrentHashMap<>();
+public class SwitchTaskUtils {
+    private static ScriptEngineManager manager;
+    private static ScriptEngine engine;
 
-    public static ProcessAddTaskParam getByTaskType(String taskType){
-        return taskServices.get(taskType);
+    static {
+        manager = new ScriptEngineManager();
+        engine = manager.getEngineByName("js");
     }
 
-    static void register(String taskType, ProcessAddTaskParam addSpecialTaskParam){
-        if (null != taskType) {
-            taskServices.put(taskType, addSpecialTaskParam);
-        }
+    public static boolean evaluate(String expression) throws ScriptException {
+        Object result = engine.eval(expression);
+        return (Boolean) result;
     }
+
 }

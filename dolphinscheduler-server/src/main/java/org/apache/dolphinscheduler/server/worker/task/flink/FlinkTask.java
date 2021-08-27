@@ -17,7 +17,6 @@
 
 package org.apache.dolphinscheduler.server.worker.task.flink;
 
-import org.apache.dolphinscheduler.common.enums.CommandType;
 import org.apache.dolphinscheduler.common.process.Property;
 import org.apache.dolphinscheduler.common.process.ResourceInfo;
 import org.apache.dolphinscheduler.common.task.AbstractParameters;
@@ -31,7 +30,10 @@ import org.apache.dolphinscheduler.server.utils.FlinkArgsUtils;
 import org.apache.dolphinscheduler.server.utils.ParamUtils;
 import org.apache.dolphinscheduler.server.worker.task.AbstractYarnTask;
 
+import org.apache.commons.collections.MapUtils;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -80,19 +82,18 @@ public class FlinkTask extends AbstractYarnTask {
         if (StringUtils.isNotEmpty(flinkParameters.getMainArgs())) {
             String args = flinkParameters.getMainArgs();
 
-            // replace placeholder
-            Map<String, Property> paramsMap = ParamUtils.convert(ParamUtils.getUserDefParamsMap(taskExecutionContext.getDefinedParams()),
-                    taskExecutionContext.getDefinedParams(),
-                    flinkParameters.getLocalParametersMap(),
-                    flinkParameters.getVarPoolMap(),
-                    CommandType.of(taskExecutionContext.getCmdTypeIfComplement()),
-                    taskExecutionContext.getScheduleTime());
+            // combining local and global parameters
+            Map<String, Property> paramsMap = ParamUtils.convert(taskExecutionContext,getParameters());
+            if (MapUtils.isEmpty(paramsMap)) {
+                paramsMap = new HashMap<>();
+            }
+            if (MapUtils.isNotEmpty(taskExecutionContext.getParamsMap())) {
+                paramsMap.putAll(taskExecutionContext.getParamsMap());
+            }
 
             logger.info("param Map : {}", paramsMap);
-            if (paramsMap != null) {
-                args = ParameterUtils.convertParameterPlaceholders(args, ParamUtils.convert(paramsMap));
-                logger.info("param args : {}", args);
-            }
+            args = ParameterUtils.convertParameterPlaceholders(args, ParamUtils.convert(paramsMap));
+            logger.info("param args : {}", args);
             flinkParameters.setMainArgs(args);
         }
     }

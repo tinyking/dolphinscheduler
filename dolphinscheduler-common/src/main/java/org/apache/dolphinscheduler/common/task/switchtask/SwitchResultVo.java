@@ -14,35 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dolphinscheduler.api.utils;
 
-import org.apache.dolphinscheduler.common.model.Server;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+package org.apache.dolphinscheduler.common.task.switchtask;
+
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * zookeeper monitor utils test
- */
-@Ignore
-public class RegistryMonitorUtilsTest {
+public class SwitchResultVo {
 
+    private String condition;
+    private List<String> nextNode;
 
-    @Test
-    public void testGetMasterList(){
-
-        RegistryMonitor registryMonitor = new RegistryMonitor();
-
-
-        List<Server> masterServerList = registryMonitor.getMasterServers();
-
-        List<Server> workerServerList = registryMonitor.getWorkerServers();
-
-        Assert.assertTrue(masterServerList.size() >= 0);
-        Assert.assertTrue(workerServerList.size() >= 0);
-
-
+    public String getCondition() {
+        return condition;
     }
 
+    public void setCondition(String condition) {
+        this.condition = condition;
+    }
+
+    public List<String> getNextNode() {
+        return nextNode;
+    }
+
+    public void setNextNode(Object nextNode) {
+        if (nextNode instanceof String) {
+            List<String> nextNodeList = new ArrayList<>();
+            nextNodeList.add(String.valueOf(nextNode));
+            this.nextNode = nextNodeList;
+        } else {
+            this.nextNode = (ArrayList) nextNode;
+        }
+    }
 }

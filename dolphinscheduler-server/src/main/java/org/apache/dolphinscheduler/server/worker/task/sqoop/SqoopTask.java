@@ -17,7 +17,6 @@
 
 package org.apache.dolphinscheduler.server.worker.task.sqoop;
 
-import org.apache.dolphinscheduler.common.enums.CommandType;
 import org.apache.dolphinscheduler.common.process.Property;
 import org.apache.dolphinscheduler.common.task.AbstractParameters;
 import org.apache.dolphinscheduler.common.task.sqoop.SqoopParameters;
@@ -28,6 +27,9 @@ import org.apache.dolphinscheduler.server.utils.ParamUtils;
 import org.apache.dolphinscheduler.server.worker.task.AbstractYarnTask;
 import org.apache.dolphinscheduler.server.worker.task.sqoop.generator.SqoopJobGenerator;
 
+import org.apache.commons.collections.MapUtils;
+
+import java.util.HashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -73,14 +75,16 @@ public class SqoopTask extends AbstractYarnTask {
         SqoopJobGenerator generator = new SqoopJobGenerator();
         String script = generator.generateSqoopJob(sqoopParameters, sqoopTaskExecutionContext);
 
-        Map<String, Property> paramsMap = ParamUtils.convert(ParamUtils.getUserDefParamsMap(sqoopTaskExecutionContext.getDefinedParams()),
-            sqoopTaskExecutionContext.getDefinedParams(),
-            sqoopParameters.getLocalParametersMap(),
-            sqoopParameters.getVarPoolMap(),
-            CommandType.of(sqoopTaskExecutionContext.getCmdTypeIfComplement()),
-            sqoopTaskExecutionContext.getScheduleTime());
+        // combining local and global parameters
+        Map<String, Property> paramsMap = ParamUtils.convert(sqoopTaskExecutionContext,getParameters());
+        if (MapUtils.isEmpty(paramsMap)) {
+            paramsMap = new HashMap<>();
+        }
+        if (MapUtils.isNotEmpty(sqoopTaskExecutionContext.getParamsMap())) {
+            paramsMap.putAll(sqoopTaskExecutionContext.getParamsMap());
+        }
 
-        if (paramsMap != null) {
+        if (MapUtils.isNotEmpty(paramsMap)) {
             String resultScripts = ParameterUtils.convertParameterPlaceholders(script, ParamUtils.convert(paramsMap));
             logger.info("sqoop script: {}", resultScripts);
             return resultScripts;
